@@ -28,7 +28,7 @@
 {{ end }}
 
 {{ block "form" . }}
-<form hx-swap="outerHTML" action="/submit" hx-post="/contacts">
+<form hx-swap="outerHTML" hx-post="/contacts">
     Name: <input 
         {{ if .Values.name }} value="{{.Values.name}}" {{end}} 
         type="text" name="name" 
