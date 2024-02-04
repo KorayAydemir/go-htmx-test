@@ -3,33 +3,39 @@ package main
 import (
 	"html/template"
 	"io"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 type Templates struct {
-	Templates *template.Template
+	templates *template.Template
 }
 
 func (t *Templates) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.Templates.ExecuteTemplate(w, name, data)
+	return t.templates.ExecuteTemplate(w, name, data)
 }
 func newTemplate() *Templates {
 	return &Templates{
-		Templates: template.Must(template.ParseGlob("views/*.html")),
+		templates: template.Must(template.ParseGlob("views/*.html")),
 	}
 }
 
+var id = 0
 type Contact struct {
 	Name  string
 	Email string
+	Id    int
 }
 
 func newContact(name, email string) Contact {
+	id++
 	return Contact{
 		Name:  name,
 		Email: email,
+        Id: id,
 	}
 }
 
@@ -61,6 +67,7 @@ type FormData struct {
 	Values map[string]string
 	Errors map[string]string
 }
+
 func newFormData() FormData {
 	return FormData{
 		Values: make(map[string]string),
@@ -72,6 +79,7 @@ type Page struct {
 	Data Data
 	Form FormData
 }
+
 func newPage() Page {
 	return Page{
 		Data: newData(),
@@ -92,6 +100,8 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Renderer = newTemplate()
+    e.Static("/images", "images")
+    e.Static("/css", "css")
 
 	page := newPage()
 
@@ -114,6 +124,25 @@ func main() {
 		c.Render(200, "form", newFormData())
 		return c.Render(200, "oob-contact", newContact)
 	})
+
+    e.DELETE("/contacts/:id", func(c echo.Context) error {
+        time.Sleep(3 * time.Second)
+        strId := c.Param("id")
+        id, err := strconv.Atoi(strId)
+        if err != nil {
+            return c.String(400, "Invalid id")
+        }
+
+        for i, contact := range page.Data.Contacts {
+            if contact.Id == int(id) {
+                page.Data.Contacts = append(page.Data.Contacts[:i], page.Data.Contacts[i+1:]...)
+                break
+            }
+        }
+
+        return c.NoContent(200)
+    })
+
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
